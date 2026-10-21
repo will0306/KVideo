@@ -14,6 +14,7 @@ import type { M3UChannel } from '@/lib/utils/m3u-parser';
 import type { IPTVSource } from '@/lib/store/iptv-store';
 import { settingsStore, DEFAULT_SEEK_STEP_SECONDS } from '@/lib/store/settings-store';
 import { shouldHidePlayerCursor } from '@/lib/player/cursor-visibility';
+import { useIsTV } from '@/lib/contexts/TVContext';
 
 const HLS_LIVE_CONFIG: Partial<Hls['config']> = {
   enableWorker: true,
@@ -73,6 +74,7 @@ function getSeekRange(video: HTMLVideoElement): { start: number; end: number; du
 }
 
 export function IPTVPlayer({ channel, onClose, channels, onChannelChange, channelsBySource, sources }: IPTVPlayerProps) {
+  const isTV = useIsTV();
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,8 +128,19 @@ export function IPTVPlayer({ channel, onClose, channels, onChannelChange, channe
   useEffect(() => {
     if (showSidebar && activeChannelRef.current) {
       activeChannelRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // TV: put the D-pad focus on the playing channel
+      if (isTV) activeChannelRef.current.focus({ preventScroll: true });
     }
-  }, [showSidebar, channel.url]);
+  }, [showSidebar, channel.url, isTV]);
+
+  // TV: the player stage holds focus whenever the sidebar is closed (Up/Down switch channels)
+  useEffect(() => {
+    if (!isTV || showSidebar) return;
+    const container = containerRef.current;
+    if (container && !container.contains(document.activeElement)) {
+      container.focus({ preventScroll: true });
+    }
+  }, [isTV, showSidebar]);
 
   useEffect(() => {
     const syncSeekStep = () => {
@@ -279,7 +292,9 @@ export function IPTVPlayer({ channel, onClose, channels, onChannelChange, channe
     }, LOADING_TIMEOUT_MS);
 
     if (Hls.isSupported()) {
-      const hls = new Hls(HLS_LIVE_CONFIG);
+      // Old TV WebViews shift buffered media forward (see lib/legacy-polyfills.ts); allow that as a buffer hole
+      const dtsShift = (window as Window & { __kvideoDtsShift?: number }).__kvideoDtsShift;
+      const hls = new Hls(dtsShift ? { ...HLS_LIVE_CONFIG, maxBufferHole: dtsShift + 0.1 } : HLS_LIVE_CONFIG);
       hlsRef.current = hls;
 
       let triedProxy = false;
@@ -521,6 +536,47 @@ export function IPTVPlayer({ channel, onClose, channels, onChannelChange, channe
       const video = videoRef.current;
       if (!video) return;
 
+      const isStageFocused = document.activeElement === containerRef.current;
+      const switchChannel = (step: number) => {
+        if (channels.length < 2) return;
+        const currentIndex = channels.findIndex(ch => ch.name === channel.name && ch.url === channel.url);
+        const nextIndex = (Math.max(currentIndex, 0) + step + channels.length) % channels.length;
+        onChannelChange(channels[nextIndex]);
+      };
+
+      // On TV the arrows move focus between controls (spatial navigation); with the stage focused
+      // Up/Down switch channels like a set-top box, Enter opens the channel list.
+      if (isTV) {
+        switch (e.key) {
+          case 'ArrowUp':
+          case 'ArrowDown':
+            if (isStageFocused && !e.defaultPrevented) {
+              e.preventDefault();
+              switchChannel(e.key === 'ArrowUp' ? -1 : 1);
+            }
+            return;
+          case 'ArrowLeft':
+          case 'ArrowRight':
+            return;
+          case 'ChannelUp':
+          case 'PageUp':
+            e.preventDefault();
+            switchChannel(-1);
+            return;
+          case 'ChannelDown':
+          case 'PageDown':
+            e.preventDefault();
+            switchChannel(1);
+            return;
+          case 'Enter':
+            if (isStageFocused) {
+              e.preventDefault();
+              setShowSidebar(true);
+            }
+            return;
+        }
+      }
+
       switch (e.key.toLowerCase()) {
         case ' ':
         case 'k':
@@ -537,7 +593,12 @@ export function IPTVPlayer({ channel, onClose, channels, onChannelChange, channe
           break;
         case 'escape':
           e.preventDefault();
-          onClose();
+          // TV Back closes the channel list before leaving the player
+          if (isTV && showSidebar) {
+            setShowSidebar(false);
+          } else {
+            onClose();
+          }
           break;
         case 'arrowright':
         case 'l':
@@ -789,6 +850,11 @@ export function IPTVPlayer({ channel, onClose, channels, onChannelChange, channe
     <div
       ref={containerRef}
       className="fixed inset-0 z-[9999] bg-black flex"
+      data-tv-layer
+      tabIndex={isTV ? 0 : undefined}
+      data-tv-player={isTV ? '' : undefined}
+      data-tv-keys={isTV ? 'vertical' : undefined}
+      data-tv-autofocus={isTV ? '' : undefined}
       style={{ cursor: shouldHideCursor ? 'none' : undefined }}
       onMouseMove={resetControlsTimeout}
       onClick={(e) => {
@@ -985,7 +1051,7 @@ export function IPTVPlayer({ channel, onClose, channels, onChannelChange, channe
 
       {/* Sidebar */}
       {showSidebar && (
-        <div data-sidebar className="w-72 bg-[#111] border-l border-white/10 overflow-y-auto flex-shrink-0">
+        <div data-sidebar data-tv-layer className="w-72 bg-[#111] border-l border-white/10 overflow-y-auto flex-shrink-0">
           <div className="sticky top-0 bg-[#111] z-10">
             <div className="p-3 border-b border-white/10 flex items-center justify-between">
               <h3 className="text-white text-sm font-medium">频道列表</h3>

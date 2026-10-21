@@ -2,6 +2,8 @@
 
 import { useAddSourceForm } from './hooks/useAddSourceForm';
 import { ModalBackdrop } from '@/components/ui/ModalBackdrop';
+import { useEscapeKey } from '@/lib/hooks/useEscapeKey';
+import { useIsTV } from '@/lib/contexts/TVContext';
 import { ModalHeader } from '@/components/ui/ModalHeader';
 import type { VideoSource } from '@/lib/types';
 
@@ -33,6 +35,10 @@ export function AddSourceModal({ isOpen, onClose, onAdd, existingIds, initialVal
     initialValues,
   });
 
+  // TV remote Back (sent as Escape) closes the modal; desktop keeps Escape inert so typed input isn't lost
+  const isTV = useIsTV();
+  useEscapeKey(isOpen && isTV, onClose);
+
   if (!isOpen) return null;
 
   return (
@@ -41,6 +47,8 @@ export function AddSourceModal({ isOpen, onClose, onAdd, existingIds, initialVal
 
       {/* Modal */}
       <div
+        role="dialog"
+        aria-modal="true"
         className={`fixed top-1/2 left-1/2 z-[9999] w-[90%] max-w-md -translate-x-1/2 transition-all duration-300 ${isOpen
           ? 'opacity-100 -translate-y-1/2 scale-100'
           : 'opacity-0 -translate-y-[40%] scale-95 pointer-events-none'

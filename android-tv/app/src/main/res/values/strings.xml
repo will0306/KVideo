@@ -10,5 +10,6 @@
     <string name="status_ready">已准备就绪</string>
     <string name="status_first_launch">首次使用请先填写可访问的 KVideo 地址</string>
     <string name="status_invalid_url">地址无效。请输入完整的 http:// 或 https:// 地址，或输入域名后让应用自动补全为 https://。</string>
+    <string name="status_webview_unsupported">系统 WebView 版本过低（Chrome %1$d），KVideo 页面无法显示。请先升级 “Android System WebView” 到 %2$d 或更高版本（可从应用市场或厂商系统更新获取），然后重新打开本应用。</string>
     <string name="status_settings_hint">你可以在这里修改服务器地址，然后重新打开 KVideo。</string>
 </resources>

@@ -19,6 +19,7 @@ const TV_USER_AGENT_PATTERNS = [
   /netcast/i, // LG NetCast
   /viera/i, // Panasonic Viera
   /hbbtv/i,
+  /kvideotv/i, // KVideo Android TV shell
 ];
 
 export function useTVDetection(): boolean {

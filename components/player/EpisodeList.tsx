@@ -8,6 +8,7 @@ import { Icons } from '@/components/ui/Icon';
 import { LatencyBadge } from '@/components/ui/LatencyBadge';
 import { Button } from '@/components/ui/Button';
 import { useKeyboardNavigation } from '@/lib/hooks/useKeyboardNavigation';
+import { useIsTV } from '@/lib/contexts/TVContext';
 import { settingsStore } from '@/lib/store/settings-store';
 import type { VideoResolutionInfo } from './hooks/useVideoResolution';
 import type { ResolutionInfo } from '@/lib/hooks/useResolutionProbe';
@@ -286,9 +287,11 @@ export function EpisodeList({
     return episodes.length - 1 - originalIndex;
   }, [episodes, isReversed]);
 
-  // Keyboard navigation
+  // Keyboard navigation (list-relative). On TV the global spatial navigation moves between the
+  // grid's buttons by position and each button plays its own episode on Enter.
+  const isTV = useIsTV();
   useKeyboardNavigation({
-    enabled: !episodeSectionCollapsed,
+    enabled: !episodeSectionCollapsed && !isTV,
     containerRef: listRef,
     currentIndex: getDisplayIndex(currentEpisode),
     itemCount: episodes?.length || 0,

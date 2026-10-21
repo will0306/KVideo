@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { useIsTV } from '@/lib/contexts/TVContext';
 
 interface DesktopSpeedMenuProps {
     showSpeedMenu: boolean;
@@ -202,6 +203,19 @@ export function DesktopSpeedMenu({
         return () => window.removeEventListener('scroll', handleScroll);
     }, [showSpeedMenu, onToggleSpeedMenu]);
 
+    // TV remote Back (sent as Escape) closes the menu before it reaches the fullscreen handlers
+    const isTV = useIsTV();
+    React.useEffect(() => {
+        if (!isTV || !showSpeedMenu) return;
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            e.stopPropagation();
+            onToggleSpeedMenu();
+        };
+        document.addEventListener('keydown', handleEscape, true);
+        return () => document.removeEventListener('keydown', handleEscape, true);
+    }, [isTV, showSpeedMenu, onToggleSpeedMenu]);
+
     React.useEffect(() => {
         if (showSpeedMenu) {
             calculateMenuPosition();
@@ -220,6 +234,7 @@ export function DesktopSpeedMenu({
     const MenuContent = (
         <div
             ref={menuRef}
+            data-tv-layer
             className={`absolute z-[2147483647] bg-[var(--glass-bg)] backdrop-blur-[25px] saturate-[180%] rounded-[var(--radius-2xl)] border border-[var(--glass-border)] shadow-[var(--shadow-md)] p-1 sm:p-1.5 w-fit ${isRotated ? 'min-w-[2.5rem]' : 'min-w-[3.5rem] sm:min-w-[4.5rem]'} animate-in fade-in zoom-in-95 duration-200 overflow-y-auto`}
             style={{
                 ...(isRotated ? {

@@ -4,6 +4,7 @@ import { useSearchCache } from '@/lib/hooks/useSearchCache';
 import { useParallelSearch } from '@/lib/hooks/useParallelSearch';
 import { useSubscriptionSync } from '@/lib/hooks/useSubscriptionSync';
 import { settingsStore } from '@/lib/store/settings-store';
+import { useTVBackHandler } from '@/lib/hooks/useTVBackHandler';
 import { VideoSource } from '@/lib/types';
 
 export function usePremiumHomePage() {
@@ -133,6 +134,9 @@ export function usePremiumHomePage() {
         resetSearch();
         router.replace('/premium', { scroll: false });
     };
+
+    // Search results replace the URL instead of pushing history, so TV Back clears them
+    useTVBackHandler(hasSearched, handleReset);
 
     return {
         query,

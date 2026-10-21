@@ -19,6 +19,7 @@ import { VideoTogetherController } from '@/components/VideoTogetherController';
 import { shouldEnableVercelAnalytics } from '@/lib/config/deployment';
 import { getRuntimeFeatures } from "@/lib/server/runtime-features";
 import { resolveSiteIconSrc } from '@/lib/server/site-icon';
+import { LEGACY_POLYFILLS_SCRIPT } from '@/lib/legacy-polyfills';
 import fs from 'fs';
 import path from 'path';
 
@@ -92,6 +93,8 @@ export default async function RootLayout({
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head>
+        {/* Must stay first: old TV WebViews need these before any Next.js chunk runs */}
+        <script dangerouslySetInnerHTML={{ __html: LEGACY_POLYFILLS_SCRIPT }} />
         {/* PWA Manifest */}
         <link rel="manifest" href="/manifest.json" />
         {/* Apple PWA Support */}

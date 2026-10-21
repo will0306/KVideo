@@ -39,11 +39,16 @@ export function WatchHistorySidebar({ isPremium = false }: { isPremium?: boolean
     if (isOpen && sidebarRef.current) {
       cleanupFocusTrapRef.current = trapFocus(sidebarRef.current);
     }
+    const sidebar = sidebarRef.current;
 
     return () => {
       if (cleanupFocusTrapRef.current) {
         cleanupFocusTrapRef.current();
         cleanupFocusTrapRef.current = null;
+      }
+      // The closed sidebar stays mounted off-screen; don't leave focus (and Enter) inside it
+      if (sidebar && document.activeElement instanceof HTMLElement && sidebar.contains(document.activeElement)) {
+        document.activeElement.blur();
       }
     };
   }, [isOpen]);
@@ -51,7 +56,8 @@ export function WatchHistorySidebar({ isPremium = false }: { isPremium?: boolean
   // Handle escape key to close sidebar
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      // A confirm dialog on top of the sidebar handles its own Escape
+      if (e.key === 'Escape' && isOpen && !e.defaultPrevented && !document.querySelector('[aria-modal="true"]')) {
         setIsOpen(false);
       }
     };
@@ -118,6 +124,7 @@ export function WatchHistorySidebar({ isPremium = false }: { isPremium?: boolean
         role="complementary"
         aria-labelledby="history-sidebar-title"
         aria-hidden={!isOpen}
+        data-tv-layer
         style={{
           transform: isOpen ? 'translate3d(0, 0, 0)' : 'translate3d(100%, 0, 0)',
           willChange: isOpen ? 'transform' : 'auto'

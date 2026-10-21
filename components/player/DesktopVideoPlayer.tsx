@@ -13,6 +13,7 @@ import { DanmakuCanvas } from './DanmakuCanvas';
 import { usePlayerSettings } from './hooks/usePlayerSettings';
 import { useDanmaku } from './hooks/useDanmaku';
 import { useIsIOS, useIsMobile } from '@/lib/hooks/mobile/useDeviceDetection';
+import { useIsTV } from '@/lib/contexts/TVContext';
 import { useDoubleTap } from '@/lib/hooks/mobile/useDoubleTap';
 import { settingsStore, DEFAULT_SEEK_STEP_SECONDS } from '@/lib/store/settings-store';
 import { premiumModeSettingsStore } from '@/lib/store/premium-mode-settings';
@@ -93,7 +94,9 @@ export function DesktopVideoPlayer({
   const { refs, data, actions } = useDesktopPlayerState();
   const { fullscreenType: settingsFullscreenType } = usePlayerSettings(isPremium);
   const isIOS = useIsIOS();
-  const isMobile = useIsMobile();
+  const isTV = useIsTV();
+  // Android TV WebViews carry "Android" in the UA but have no touch screen
+  const isMobile = useIsMobile() && !isTV;
   const [viewportMetrics, setViewportMetrics] = React.useState<ViewportMetrics>(() => readViewportMetrics());
   const [seekStepSeconds, setSeekStepSeconds] = React.useState(DEFAULT_SEEK_STEP_SECONDS);
   const [webFullscreenSize, setWebFullscreenSize] = React.useState<WebFullscreenSize>(() => {
@@ -150,7 +153,7 @@ export function DesktopVideoPlayer({
   // - Mobile: Window Fullscreen (Better for Danmaku/Controls)
   // - Desktop: Native Fullscreen (Better for PiP/Performance)
   const fullscreenType = settingsFullscreenType === 'auto'
-    ? (isIOS ? 'window' : isMobile ? 'window' : 'native') // Treat all mobile as window for consistency if auto
+    ? (isIOS || isMobile || isTV ? 'window' : 'native') // Mobile and TV WebViews use window fullscreen if auto
     : settingsFullscreenType;
 
   const isLandscape = viewportMetrics.width > viewportMetrics.height;
@@ -358,6 +361,12 @@ export function DesktopVideoPlayer({
       className={`kvideo-container relative aspect-video bg-black group ${data.fullscreenMode === 'window' ? 'is-web-fullscreen' : ''
         } ${shouldForceLandscape ? 'force-landscape' : ''} ${isTopAlignedWebFullscreen ? 'top-align-stage' : ''} overflow-hidden rounded-none sm:rounded-[var(--radius-2xl)]`}
       style={containerStyle}
+      // TV: the stage is a D-pad stop that owns Left/Right (seek) and Enter (play/pause);
+      // while the controls are hidden it also takes Up/Down to reveal them first
+      tabIndex={isTV ? 0 : undefined}
+      data-tv-player={isTV ? '' : undefined}
+      data-tv-keys={isTV ? (data.showControls ? 'horizontal' : 'all') : undefined}
+      data-tv-autofocus={isTV ? '' : undefined}
       onMouseMove={() => { handleMouseMove(); }}
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >

@@ -6,6 +6,7 @@ import { usePlayerSettings } from '../hooks/usePlayerSettings';
 import { settingsStore, AdFilterMode } from '@/lib/store/settings-store';
 
 import { createPortal } from 'react-dom';
+import { useIsTV } from '@/lib/contexts/TVContext';
 
 interface DesktopMoreMenuProps {
     showMoreMenu: boolean;
@@ -253,6 +254,19 @@ export function DesktopMoreMenu({
         return () => window.removeEventListener('scroll', handleScroll);
     }, [showMoreMenu, onToggleMoreMenu]);
 
+    // TV remote Back (sent as Escape) closes the menu before it reaches the fullscreen handlers
+    const isTV = useIsTV();
+    React.useEffect(() => {
+        if (!isTV || !showMoreMenu) return;
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            e.stopPropagation();
+            onToggleMoreMenu();
+        };
+        document.addEventListener('keydown', handleEscape, true);
+        return () => document.removeEventListener('keydown', handleEscape, true);
+    }, [isTV, showMoreMenu, onToggleMoreMenu]);
+
     React.useEffect(() => {
         if (showMoreMenu) {
             calculateMenuPosition();
@@ -271,6 +285,7 @@ export function DesktopMoreMenu({
     const MenuContent = (
         <div
             ref={menuRef}
+            data-tv-layer
             className={`absolute z-[2147483647] bg-[var(--glass-bg)] backdrop-blur-[25px] saturate-[180%] rounded-[var(--radius-2xl)] border border-[var(--glass-border)] shadow-[var(--shadow-md)] p-1.5 sm:p-2 w-fit ${isRotated ? 'min-w-[170px]' : 'min-w-[200px] sm:min-w-[240px]'} animate-in fade-in zoom-in-95 duration-200 overflow-y-auto`}
             style={{
                 ...(isRotated ? {

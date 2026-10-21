@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useEscapeKey } from '@/lib/hooks/useEscapeKey';
+import { useIsTV } from '@/lib/contexts/TVContext';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -18,6 +20,10 @@ export function ExportModal({ isOpen, onClose, onExport }: ExportModalProps) {
       setIncludeWatchHistory(true);
     }
   }, [isOpen]);
+
+  // TV remote Back (sent as Escape) closes the modal; desktop keeps Escape inert so typed input isn't lost
+  const isTV = useIsTV();
+  useEscapeKey(isOpen && isTV, onClose);
 
   const handleExport = () => {
     onExport(includeSearchHistory, includeWatchHistory);
@@ -37,6 +43,8 @@ export function ExportModal({ isOpen, onClose, onExport }: ExportModalProps) {
 
       {/* Modal */}
       <div
+        role="dialog"
+        aria-modal="true"
         className={`fixed top-1/2 left-1/2 z-[9999] w-[90%] max-w-md -translate-x-1/2 transition-all duration-300 ${isOpen
             ? 'opacity-100 -translate-y-1/2 scale-100'
             : 'opacity-0 -translate-y-[40%] scale-95 pointer-events-none'

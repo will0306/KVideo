@@ -9,6 +9,8 @@ import { JsonImportTab } from './import/JsonImportTab';
 import type { ImportResult } from '@/lib/utils/source-import-utils';
 import type { SourceSubscription } from '@/lib/types';
 import { ModalBackdrop } from '@/components/ui/ModalBackdrop';
+import { useEscapeKey } from '@/lib/hooks/useEscapeKey';
+import { useIsTV } from '@/lib/contexts/TVContext';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -43,6 +45,10 @@ export function ImportModal({
     }
   }, [isOpen]);
 
+  // TV remote Back (sent as Escape) closes the modal; desktop keeps Escape inert so typed input isn't lost
+  const isTV = useIsTV();
+  useEscapeKey(isOpen && isTV, onClose);
+
   if (!isOpen) return null;
 
   return (
@@ -51,6 +57,8 @@ export function ImportModal({
 
       {/* Modal */}
       <div
+        role="dialog"
+        aria-modal="true"
         className={`fixed top-1/2 left-1/2 z-[9999] w-[90%] max-w-md -translate-x-1/2 transition-all duration-300 ${isOpen
             ? 'opacity-100 -translate-y-1/2 scale-100'
             : 'opacity-0 -translate-y-[40%] scale-95 pointer-events-none'
